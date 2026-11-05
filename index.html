@@ -470,7 +470,7 @@ window.cloudRestore=async function(id){if(!/^[a-f0-9-]{36}$/i.test(id))return cl
 async function cloudAutoCheck(){if(checking||!cloudSession||!isConfigured())return;
  // Su un PC nuovo non sovrascrivere i backup cloud con i cataloghi iniziali: prima ripristina.
  if(!localStorage.getItem(UKEY)&&!localStorage.getItem(CKEY))return;
- checking=true;try{const rows=await listRows();if(rows.length&&!localStorage.getItem(DEVICE_KEY))return;if(localStorage.getItem('retail_pending_bulk_cloud_v1')==='1'||!rows.length||Date.now()-new Date(rows[0].created_at).getTime()>=24*HOUR){await saveSnapshot(localStorage.getItem('retail_pending_bulk_cloud_v1')==='1'?'manual':'auto');localStorage.removeItem('retail_pending_bulk_cloud_v1');if(byId('cloudList'))await cloudLoadList()}}catch(e){console.warn('Backup automatico cloud non riuscito:',e.message)}finally{checking=false}}
+ checking=true;try{const rows=await listRows();if(rows.length&&!localStorage.getItem(DEVICE_KEY)&&localStorage.getItem('retail_pending_bulk_cloud_v1')!=='1')return;if(localStorage.getItem('retail_pending_bulk_cloud_v1')==='1'||!rows.length||Date.now()-new Date(rows[0].created_at).getTime()>=24*HOUR){await saveSnapshot(localStorage.getItem('retail_pending_bulk_cloud_v1')==='1'?'manual':'auto');localStorage.removeItem('retail_pending_bulk_cloud_v1');if(byId('cloudList'))await cloudLoadList()}}catch(e){console.warn('Backup automatico cloud non riuscito:',e.message)}finally{checking=false}}
 // Called by the batch editor only after all local edits have committed.
 window.cloudBackupAfterBatch=async function(){
  if(!cloudSession)return {ok:false,reason:'effettua l’accesso con la tua email e password'};
