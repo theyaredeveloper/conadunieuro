@@ -241,4 +241,136 @@ window.unieuroSaveCard=function(code){let c=db.cards.find(x=>x.code===code);if(!
 // Optionally allow direct edit of a recorded purchase count, separately from point rules.
 })();
 
-</script></body></html>
+</script><script>
+
+(function(){
+"use strict";
+const $=id=>document.getElementById(id), N=x=>Number(x)||0, R=x=>Math.round((Number(x)+Number.EPSILON)*100)/100;
+const esc6=s=>String(s??"").replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
+const sty=document.createElement("style");
+sty.textContent=".upgrade-mini{display:flex;gap:6px;flex-wrap:wrap;margin:7px 0}.upgrade-mini button{min-height:28px!important;padding:7px 9px!important;font-size:11px!important}.upgrade-logo{display:block;margin:0 auto 10px;width:95px;max-height:90px;object-fit:contain}@media print{.upgrade-logo{visibility:visible!important}}";
+document.head.appendChild(sty);
+function miniButtons(){
+ if($("cash-upgrade-buttons"))return;
+ let anchor=$("slotToggle")?.closest(".card")||$("unieuroPane")?.querySelector(".panel-body");if(!anchor)return;
+ let div=document.createElement("div");div.id="cash-upgrade-buttons";div.className="upgrade-mini";
+ div.innerHTML='<button class="btn primary" onclick="openTempProduct2026()">＋ AGGIUNGI PRODOTTO TEMPORANEO</button><button class="btn" onclick="openCards()">▤ GESTIONE FIDELITY</button>';
+ anchor.before(div);
+}
+window.openTempProduct2026=function(){
+ if(!requireOpen())return;
+ showModal('<h2>＋ Articolo temporaneo</h2><p class="hint">Inserito solo in questa vendita, non nel catalogo permanente.</p><label>Nome</label><input id="t26name" maxlength="100" placeholder="Nome prodotto"><label>Descrizione / nota</label><input id="t26desc" maxlength="140" placeholder="Descrizione"><label>Prezzo €</label><input type="number" id="t26price" min=".01" step=".01"><label>IVA %</label><select id="t26vat"><option>22</option><option>10</option><option>4</option><option>0</option></select><button class="btn primary" onclick="addTempProduct2026()">AGGIUNGI AL CARRELLO</button>');
+};
+window.addTempProduct2026=function(){
+ let name=$("t26name").value.trim(),detail=$("t26desc").value.trim(),price=Number($("t26price").value),vat=Number($("t26vat").value);
+ if(!name||!Number.isFinite(price)||price<=0||price>99999)return toast("Inserisci nome e prezzo valido");
+ let id=Date.now()+Math.floor(Math.random()*5000);
+ db.products.push({id,name:name+(detail?" — "+detail:""),cat:"TEMPORANEI",sub:"Solo ordine corrente",price:R(price),vat,barcode:"TMP"+id,temporary:true});
+ closeModal();addProduct(id);
+};
+function pruneTemp(){
+ let inUse=new Set(db.slots.flatMap(s=>(s.cart||[]).map(l=>l.id)));
+ db.products=db.products.filter(p=>!p.temporary||inUse.has(p.id));save();
+}
+const oldComplete=window.completeSale;
+window.completeSale=function(method,paid){
+ let s=getSlot(),c=db.cards.find(x=>x.code===s.card),amt=calc().total,has=(s.cart.length||digitalState().length)>0;
+ if(c&&has){c.purchases=N(c.purchases)+1;c.spent=R(N(c.spent)+amt);c.lastPurchase=new Date().toISOString();}
+ let ret=oldComplete(method,paid);pruneTemp();return ret;
+};
+if(typeof window.cancelSale==="function"){
+ const oldCancel=window.cancelSale;
+ window.cancelSale=function(){let result=oldCancel();pruneTemp();return result;};
+}
+window.openCards=function(){
+ showModal('<h2>▤ Gestione completa tessere cliente</h2><p class="hint">Modifica punti, acquisti e spesa cumulativa delle tessere simulate.</p><div class="mini-grid"><input id="cardName" placeholder="Nome cliente"><button class="btn primary" onclick="createCard()">＋ CREA TESSERA</button></div><div class="manage">'+db.cards.map((c,i)=>'<div class="summary-row"><span><b>'+esc6(c.name)+'</b><br><small>'+esc6(c.code)+' · '+N(c.points)+' punti · '+N(c.purchases)+' acquisti · € '+N(c.spent).toFixed(2)+'</small></span><span><button class="btn tiny" onclick="useCard('+i+')">USA</button> <button class="btn tiny primary" onclick="editCard2026('+i+')">MODIFICA</button> <button class="btn tiny danger" onclick="deleteCard('+i+')">ELIMINA</button></span></div>').join("")+'</div>');
+};
+window.editCard2026=function(i){
+ let c=db.cards[i];if(!c)return;
+ showModal('<h2>✎ Tessera cliente</h2><p>Codice: '+esc6(c.code)+'</p><label>Nome</label><input id="fc26name" value="'+esc6(c.name)+'"><label>Punti disponibili</label><input id="fc26points" type="number" min="0" step="1" value="'+N(c.points)+'"><label>Numero acquisti</label><input id="fc26purchases" type="number" min="0" step="1" value="'+N(c.purchases)+'"><label>Totale spesa storica €</label><input id="fc26spent" type="number" min="0" step=".01" value="'+N(c.spent)+'"><button class="btn primary" onclick="saveCard2026('+i+')">SALVA</button> <button class="btn" onclick="openCards()">INDIETRO</button>');
+};
+window.saveCard2026=function(i){
+ let c=db.cards[i],name=$("fc26name").value.trim(),p=Number($("fc26points").value),a=Number($("fc26purchases").value),sp=Number($("fc26spent").value);
+ if(!name||![p,a,sp].every(v=>Number.isFinite(v)&&v>=0)||!Number.isInteger(p)||!Number.isInteger(a))return toast("Verifica dati fidelity");
+ Object.assign(c,{name,points:p,purchases:a,spent:R(sp)});save();renderAll();openCards();
+};
+const oldTicket=window.ticketText;
+window.ticketText=function(){
+ let s=oldTicket.apply(this,arguments);
+ return s.replace("*** FAC-SIMILE NON FISCALE ***\n","").replace("DOCUMENTO DIMOSTRATIVO\nNON VALIDO AI FINI FISCALI\nNESSUNA TRANSAZIONE REALE","").trimEnd()+"\n\nSIMULAZIONE · NON VALIDO AI FINI FISCALI";
+};
+const oldShow=window.showTicket;
+window.showTicket=function(ticket){
+ oldShow(ticket);
+ let node=$("ticketPrint");if(node&&!node.querySelector(".upgrade-logo")){
+  let logo=document.createElement("img");logo.className="upgrade-logo";logo.src="https://i.ibb.co/mC4j9fWc/mstile-150x150.png";logo.alt="Logo Unieuro";node.prepend(logo);
+ }
+};
+function installC(){
+ const d=$("conadIframe").contentDocument;if(!d?.body)return;
+ function inIframe(){
+  const e=s=>String(s??"").replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
+  const n=x=>Number(x)||0, rr=x=>Math.round((Number(x)+Number.EPSILON)*100)/100;
+  const tray=document.createElement("div");tray.style="position:fixed;left:8px;bottom:8px;z-index:49;display:flex;gap:5px;flex-wrap:wrap";
+  tray.innerHTML='<button class="red" onclick="tempConad2026()">＋ PRODOTTO TEMPORANEO</button><button class="blue" onclick="cardsConad2026()">▤ FIDELITY AVANZATA</button>';document.body.appendChild(tray);
+  window.tempConad2026=function(){
+   if(!requireOpen())return;
+   $("overlay").classList.add("show");
+   $("modal").innerHTML='<button class="close" onclick="closeModal()">✕ Chiudi</button><h2>＋ Articolo temporaneo CONAD</h2><p class="note">Solo vendita corrente.</p><label>Nome</label><input id="c26name"><label>Descrizione</label><input id="c26desc"><label>Prezzo €</label><input id="c26price" type="number" min=".01" step=".01"><label>IVA %</label><select id="c26vat"><option>10</option><option>22</option><option>4</option><option>0</option></select><button class="green" onclick="addTempConad2026()">AGGIUNGI</button>';
+  };
+  window.addTempConad2026=function(){
+   let name=$("c26name").value.trim(),detail=$("c26desc").value.trim(),p=Number($("c26price").value),vat=Number($("c26vat").value);
+   if(!name||!Number.isFinite(p)||p<=0||p>99999)return notify("Nome o prezzo errato");
+   let id=Date.now()+Math.floor(Math.random()*5000);
+   db.products.push({id,name:name+(detail?" — "+detail:""),cat:"TEMPORANEI",price:rr(p),vat,barcode:"TMP"+id,temporary:true});categories();closeModal();addProduct(id);
+  };
+  window.cardsConad2026=function(){
+   $("overlay").classList.add("show");
+   $("modal").innerHTML='<button class="close" onclick="closeModal()">✕ Chiudi</button><h2>▤ Gestione Carta Insieme</h2><p class="note">Programmi e regole punti possono variare per cooperativa e promozione; qui sono simulati.</p>'+db.cards.map((c,i)=>'<div class="setting"><span><b>'+e(c.name)+'</b><br><small>'+e(c.code)+' · '+n(c.points)+' punti · '+n(c.purchases)+' acquisti · € '+n(c.spent).toFixed(2)+'</small></span><button onclick="editC2026('+i+')">MODIFICA</button></div>').join("")+'<button onclick="openModal(\'fidelities\')">CREA / ELIMINA CARTE</button>';
+  };
+  window.editC2026=function(i){
+   let c=db.cards[i];if(!c)return;
+   $("overlay").classList.add("show");
+   $("modal").innerHTML='<button class="close" onclick="cardsConad2026()">← Indietro</button><h2>✎ Modifica tessera</h2><label>Nome</label><input id="ce26name" value="'+e(c.name)+'"><label>Punti</label><input id="ce26points" type="number" min="0" step="1" value="'+n(c.points)+'"><label>Acquisti</label><input id="ce26count" type="number" min="0" step="1" value="'+n(c.purchases)+'"><label>Spesa storica €</label><input id="ce26spent" type="number" min="0" step=".01" value="'+n(c.spent)+'"><button class="green" onclick="saveC2026('+i+')">SALVA</button>';
+  };
+  window.saveC2026=function(i){
+   let c=db.cards[i],name=$("ce26name").value.trim(),p=Number($("ce26points").value),a=Number($("ce26count").value),sp=Number($("ce26spent").value);
+   if(!name||![p,a,sp].every(v=>Number.isFinite(v)&&v>=0)||!Number.isInteger(p)||!Number.isInteger(a))return notify("Dati invalidi");
+   Object.assign(c,{name,points:p,purchases:a,spent:rr(sp)});save();render();cardsConad2026();
+  };
+  function prune(){let used=new Set(db.slots.flatMap(s=>(s.cart||[]).map(l=>l.id)));db.products=db.products.filter(p=>!p.temporary||used.has(p.id));save();categories();}
+  const originalComplete=window.complete;
+  window.complete=function(method,paid){
+   let c=getCard(),s=slot(),t=totals();
+   if(c&&s.cart.length){c.purchases=n(c.purchases)+1;c.spent=rr(n(c.spent)+t.total);c.lastPurchase=new Date().toISOString();}
+   let result=originalComplete(method,paid);prune();return result;
+  };
+  const originalVoid=window.voidSale;
+  window.voidSale=function(){let r=originalVoid();prune();return r;};
+  const originalTicket=window.makeTicket;
+  window.makeTicket=function(){
+   let str=originalTicket.apply(this,arguments);
+   return str.replace("          CONAD RP PRO\n     ESERCITAZIONE DI CASSA\n","").replace("*** FAC-SIMILE NON FISCALE ***\n","").replace("DOCUMENTO DIMOSTRATIVO RP\nNON VALIDO AI FINI FISCALI\nNESSUNA TRANSAZIONE REALE","SIMULAZIONE · NON VALIDO AI FINI FISCALI");
+  };
+  const originalModal=window.openModal;
+  window.openModal=function(type){
+   originalModal(type);
+   if(type==="ticket"){
+    let ticket=$("printTicket");if(ticket&&!ticket.querySelector(".upgrade-conad-logo")){
+     let im=document.createElement("img");im.className="upgrade-conad-logo";im.src="https://i.ibb.co/Pzsp8FQP/images-6.png";im.alt="Logo Conad";im.style="width:95px;max-height:90px;object-fit:contain;display:block;margin:0 auto 10px";ticket.prepend(im);
+    }
+   }
+  };
+ }
+ const sc=d.createElement("script");sc.textContent="("+inIframe.toString()+")()";d.body.appendChild(sc);
+}
+const origC=window.installConadAddon;
+if(typeof origC==="function"){
+ window.installConadAddon=function(){origC();try{installC();}catch(e){console.warn("CONAD upgrade:",e)}};
+}
+const enterOld=window.enter;if(typeof enterOld==="function")window.enter=function(which){let r=enterOld(which);if(which==="unieuro")miniButtons();return r};
+miniButtons();
+})();
+
+</script>
+</body></html>
