@@ -607,11 +607,15 @@ async function conadState(){
  if(stored){try{const data=JSON.parse(stored);if(Array.isArray(data.cards)&&Array.isArray(data.products))return data}catch(e){}}
  const iframe=$p('conadIframe');
  if(!iframe)throw Error('Simulatore CONAD non disponibile');
- if(typeof conadLoaded!=='undefined'&&!conadLoaded){
+ const frameReady=()=>{try{return !!iframe.contentWindow?.eval('typeof db!=="undefined" && Array.isArray(db.cards)')}catch{return false}};
+ if(!frameReady()){
   await new Promise((resolve,reject)=>{
-   const timeout=setTimeout(()=>reject(Error('Caricamento CONAD troppo lento')),12000);
-   iframe.addEventListener('load',()=>{clearTimeout(timeout);resolve()},{once:true});
-   loadConad();
+   let done=false;
+   const timeout=setTimeout(()=>{if(!done){done=true;reject(Error('Caricamento CONAD troppo lento'))}},12000);
+   const onLoad=()=>{if(done)return;clearTimeout(timeout);done=true;resolve()};
+   iframe.addEventListener('load',onLoad,{once:true});
+   try{if(typeof conadLoaded!=='undefined'&&!conadLoaded)loadConad();else if(frameReady())onLoad()}
+   catch(e){clearTimeout(timeout);done=true;reject(e)}
   });
  }
  try{const d=iframe.contentWindow.eval('JSON.parse(JSON.stringify(db))');if(!Array.isArray(d.cards))throw Error('Dati fidelity non trovati');return d}
