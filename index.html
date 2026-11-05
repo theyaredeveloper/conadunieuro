@@ -939,4 +939,86 @@ const oldInstall=window.installConadAddon;
 if(typeof oldInstall==='function')window.installConadAddon=function(){oldInstall.apply(this,arguments);try{enhanceConad()}catch(e){console.warn('Addon fidelity',e)}};
 })();
 </script>
+
+<style id="cashier-fidelity-2026">
+.receipt-logo2026{display:block;width:86px;height:86px;object-fit:contain;margin:0 auto 8px}
+.ticket-header2026{text-align:center;border-bottom:1px dashed #777;margin-bottom:9px;padding-bottom:7px}
+.cashier-extra2026{display:flex;gap:6px;flex-wrap:wrap;margin:8px 0}
+.cashier-extra2026 .btn{padding:7px 10px;font-size:11px;border-radius:7px}
+.fidelity-edit2026{display:grid;grid-template-columns:1.2fr 90px 90px 110px auto;gap:7px;align-items:center;border-bottom:1px solid #e1eaf3;padding:8px 0}
+.fidelity-edit2026 input{width:100%;padding:7px;border:1px solid #d4e0ef;border-radius:7px}
+@media(max-width:650px){.fidelity-edit2026{grid-template-columns:1fr 1fr}.fidelity-edit2026 .cardname2026{grid-column:1/-1}}
+@media print{.ticket-header2026,.ticket-header2026 *{visibility:visible!important}.ticket-header2026{position:relative!important}}
+</style>
+<script id="cashier-features-2026">
+(function(){
+const $e=id=>document.getElementById(id);
+const euro=n=>'€ '+Number(n||0).toLocaleString('it-IT',{minimumFractionDigits:2,maximumFractionDigits:2});
+function safe(v){return String(v??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));}
+function install(){
+ const cart=$e('cartList');if(!cart)return;
+ const panel=cart.closest('.panel-body');
+ if(panel&&!$e('cashierExtras2026')){
+  const bar=document.createElement('div');bar.id='cashierExtras2026';bar.className='cashier-extra2026';
+  bar.innerHTML='<button class="btn primary" onclick="tempProduct2026()">＋ AGGIUNGI PRODOTTO TEMPORANEO</button><button class="btn" onclick="editFidelity2026()">▤ GESTIONE FIDELITY</button>';
+  panel.insertBefore(bar,panel.firstChild);
+ }
+}
+window.tempProduct2026=function(){
+ if(!requireOpen())return;
+ const total=calc().total;
+ showModal('<h2>＋ Prodotto temporaneo</h2><p>Valido solo per questa vendita: non entra nel catalogo permanente.</p><div class="field"><label>Nome articolo</label><input id="tmpName2026" maxlength="90" placeholder="Articolo occasionale"></div><div class="field"><label>Descrizione</label><input id="tmpDesc2026" maxlength="160" placeholder="Descrizione facoltativa"></div><div class="field-grid"><div class="field"><label>Prezzo €</label><input id="tmpPrice2026" type="number" min="0.01" max="99999" step="0.01"></div><div class="field"><label>IVA %</label><select id="tmpVat2026"><option>22</option><option>10</option><option>4</option><option>0</option></select></div></div><div class="field-grid"><div class="field"><label>Totale desiderato (€)</label><input id="tmpTarget2026" type="number" step="0.01" placeholder="30.00"></div><div class="field"><label>&nbsp;</label><button class="btn" onclick="tmpTargetCalc2026()">CALCOLA DIFFERENZA</button></div></div><p class="hint">Totale corrente: '+euro(total)+'. L’importo è un articolo simulato e non modifica il prezzo degli altri prodotti.</p><button class="btn primary" onclick="tmpInsert2026()">AGGIUNGI ALLA VENDITA</button>');
+};
+window.tmpTargetCalc2026=function(){
+ const target=Number($e('tmpTarget2026').value),current=calc().total;
+ if(!Number.isFinite(target)||target<=current)return toast('Il totale desiderato deve superare quello attuale');
+ $e('tmpPrice2026').value=(Math.round((target-current)*100)/100).toFixed(2);
+};
+window.tmpInsert2026=function(){
+ const name=$e('tmpName2026').value.trim(),description=$e('tmpDesc2026').value.trim(),price=Number($e('tmpPrice2026').value),vat=Number($e('tmpVat2026').value);
+ if(!name||!Number.isFinite(price)||price<=0||price>99999)return toast('Inserisci nome e prezzo valido');
+ const id=Math.max(8000000,...db.products.filter(p=>p.temporary2026).map(p=>p.id))+1;
+ db.products.push({id,name:description?name+' — '+description:name,cat:'TEMPORANEI',price:Math.round(price*100)/100,vat,barcode:'TMP'+id,temporary2026:true});
+ getSlot().cart.push({id,qty:1,disc:0});getSlot().selected=getSlot().cart.length-1;
+ save();closeModal();renderAll();beep();toast('Articolo aggiunto solo alla vendita corrente');
+};
+const originalComplete=completeSale;
+completeSale=function(method,paid){
+ const slot=getSlot(),ids=new Set(slot.cart.map(x=>x.id));
+ originalComplete(method,paid);
+ db.products=db.products.filter(p=>!p.temporary2026||!ids.has(p.id));
+ save();
+};
+const originalCancel=cancelSale;
+cancelSale=function(){
+ const oldIds=new Set(getSlot().cart.map(x=>x.id));
+ originalCancel();
+ if(!getSlot().cart.length){db.products=db.products.filter(p=>!p.temporary2026||!oldIds.has(p.id));save();}
+};
+window.editFidelity2026=function(){
+ showModal('<h2>▤ Gestione completa fidelity</h2><p>Modifica liberamente i dati delle tessere virtuali. Nessuna modifica a carte reali.</p><div class="mini-grid"><input id="newFid2026" placeholder="Nome cliente"><button class="btn primary" onclick="createFid2026()">＋ CREA TESSERA</button></div><div class="manage">'+db.cards.map((c,i)=>'<div class="fidelity-edit2026"><input class="cardname2026" id="fn26_'+i+'" value="'+safe(c.name)+'" title="Nome cliente"><input id="fp26_'+i+'" type="number" min="0" step="1" value="'+(Number(c.points)||0)+'" title="Punti"><input id="fa26_'+i+'" type="number" min="0" step="1" value="'+(Number(c.purchases)||0)+'" title="Acquisti"><input id="fs26_'+i+'" type="number" min="0" step="0.01" value="'+(Number(c.spent)||0)+'" title="Spesa cumulata"><button class="btn tiny primary" onclick="saveFid2026('+i+')">SALVA</button><small>'+safe(c.code)+'</small><button class="btn tiny" onclick="useCard('+i+')">USA</button><button class="btn tiny danger" onclick="deleteFid2026('+i+')">ELIMINA</button></div>').join('')+'</div><p class="hint">Campi: nome, punti, numero acquisti, spesa cumulata (€). Tutti i valori sono simulati.</p>');
+};
+window.createFid2026=function(){const name=$e('newFid2026').value.trim();if(!name)return toast('Inserisci un nome');db.cards.push({code:'29'+String(Date.now()).slice(-11),name,points:0,purchases:0,spent:0});save();editFidelity2026();};
+window.saveFid2026=function(i){const c=db.cards[i];if(!c)return;const name=$e('fn26_'+i).value.trim(),points=Number($e('fp26_'+i).value),purchases=Number($e('fa26_'+i).value),spent=Number($e('fs26_'+i).value);if(!name||![points,purchases,spent].every(x=>Number.isFinite(x)&&x>=0)||!Number.isInteger(points)||!Number.isInteger(purchases))return toast('Controlla i dati inseriti');Object.assign(c,{name,points,purchases,spent:Math.round(spent*100)/100});save();renderAll();toast('Fidelity aggiornata');};
+window.deleteFid2026=function(i){if(!confirm('Eliminare questa tessera virtuale?'))return;const c=db.cards[i];db.slots.forEach(s=>{if(s.card===c.code)s.card=null});db.cards.splice(i,1);save();editFidelity2026();};
+const originalCards=openCards;openCards=function(){editFidelity2026()};
+const originalTicket=showTicket;
+showTicket=function(ticket){
+ originalTicket(ticket);
+ const el=$e('ticketPrint');if(!el)return;
+ const header=document.createElement('div');header.className='ticket-header2026';
+ const logo=document.createElement('img');logo.className='receipt-logo2026';logo.src='https://i.ibb.co/mC4j9fWc/mstile-150x150.png';logo.alt='Unieuro';
+ header.appendChild(logo);const slogan=document.createElement('strong');slogan.textContent='Batte. Forte. Sempre';header.appendChild(slogan);el.prepend(header);
+};
+const originalComplete2=completeSale;
+completeSale=function(method,paid){
+ const s=getSlot(),card=db.cards.find(c=>c.code===s.card),total=calc().total;
+ originalComplete2(method,paid);
+ if(card){card.purchases=(Number(card.purchases)||0)+1;card.spent=Math.round(((Number(card.spent)||0)+total)*100)/100;save();}
+};
+install();
+}
+if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',install);else install();
+})();
+</script>
 </body></html>
