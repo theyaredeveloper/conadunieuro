@@ -56,3 +56,12 @@ Fonti di riferimento: https://www.apple.com/it/shop/buy-iphone e https://www.sam
 **⚙ IMPOSTAZIONI SIMULATORE** è il comando principale, grande. **🔐 PANNELLO ADMIN** è più piccolo e riunisce backup cloud, prodotti in blocco, premi fidelity e impostazioni.
 
 **Correzione affidabilità:** il codice dei premi è integrato direttamente in `index.html`, senza dipendenze JavaScript esterne, e i pulsanti di selezione dei modelli funzionano correttamente.
+
+## 💳 Fidelity CONAD — accesso diretto
+
+Nella cassa **CONAD**, sopra il registratore, sono ora disponibili due pulsanti:
+
+- **GESTISCI TESSERE CLIENTI** apre direttamente la gestione fidelity originale CONAD, dove puoi creare una carta con barcode, consultare i punti e usare la carta alla cassa.
+- **PREMI FIDELITY** apre il catalogo premi già condiviso, selezionando automaticamente il negozio CONAD. Il riscatto scala i punti e registra lo storico.
+
+L'accumulo punti rimane **1 € di spesa = 1 punto**. I dati CONAD restano separati da quelli UNIEURO e sono inclusi nel sistema di backup cloud del simulatore.
