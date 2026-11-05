@@ -415,7 +415,7 @@ window.cloudAuth=async function(mode){if(cloudBusy)return;const email=byId('clou
   const result=await request(path,{method:'POST',body:{email,password}});
   if(!result.access_token){state('Account creato. Controlla la tua email. Puoi confermare copiando il link nel campo qui sotto, senza aprire localhost.');return}
   saveSession({access_token:result.access_token,refresh_token:result.refresh_token,expires_at:Date.now()+(result.expires_in||3600)*1000,user_id:result.user?.id,email:result.user?.email||email});
-  openCloudBackup();state('Accesso effettuato');await cloudAutoCheck();
+  openCloudBackup();state('Accesso effettuato');if(localStorage.getItem('retail_batch_backup_pending_v1'))await window.cloudSaveAfterBatch();await cloudAutoCheck();
  }catch(e){cloudError(e)}finally{cloudBusy=false}}
 window.cloudResendConfirmation=async function(){
  if(cloudBusy)return;const email=byId('cloudEmail')?.value?.trim();if(!email){state('Inserisci prima la tua email',true);return}
@@ -454,6 +454,13 @@ async function saveSnapshot(origin='manual'){const s=await validSession();if(!s)
  try{localStorage.setItem(DEVICE_KEY,'1')}catch(e){}
  return true;
 }
+window.cloudSaveAfterBatch=async function(){
+ if(cloudBusy)return {ok:false,message:'Il cloud è occupato, riprova dal pannello backup'};
+ if(!cloudSession)return {ok:false,message:'Devi accedere una volta con email e password nel pannello ADMIN BACKUP'};
+ cloudBusy=true;try{await saveSnapshot('manual');localStorage.removeItem('retail_batch_backup_pending_v1');return {ok:true}}
+ catch(e){return {ok:false,message:e.message}}
+ finally{cloudBusy=false}
+};
 window.cloudSaveNow=async function(){if(cloudBusy)return;if(!localStorage.getItem(UKEY)&&!localStorage.getItem(CKEY)){state('Questo dispositivo non ha ancora dati locali salvati. Se hai già backup online, premi RIPRISTINA prima di creare una nuova copia.',true);return}cloudBusy=true;state('Salvataggio cloud in corso…');try{await saveSnapshot('manual');state('Backup salvato nel cloud!');await cloudLoadList()}catch(e){cloudError(e)}finally{cloudBusy=false}}
 window.cloudRestore=async function(id){if(!/^[a-f0-9-]{36}$/i.test(id))return cloudError(Error('Identificativo backup non valido'));if(cloudBusy)return;
  if(!confirm('ATTENZIONE: ripristinare questo backup sostituirà i dati locali di CONAD e UNIEURO. Prima verrà salvata una copia di sicurezza online. Continuare?'))return;
@@ -468,7 +475,8 @@ async function cloudAutoCheck(){if(checking||!cloudSession||!isConfigured())retu
  // Su un PC nuovo non sovrascrivere i backup cloud con i cataloghi iniziali: prima ripristina.
  if(!localStorage.getItem(UKEY)&&!localStorage.getItem(CKEY))return;
  checking=true;try{const rows=await listRows();if(rows.length&&!localStorage.getItem(DEVICE_KEY))return;if(!rows.length||Date.now()-new Date(rows[0].created_at).getTime()>=24*HOUR){await saveSnapshot('auto');if(byId('cloudList'))await cloudLoadList()}}catch(e){console.warn('Backup automatico cloud non riuscito:',e.message)}finally{checking=false}}
-loadStored();setTimeout(cloudAutoCheck,3000);setInterval(cloudAutoCheck,15*60*1000);
+loadStored();setTimeout(async()=>{if(localStorage.getItem('retail_batch_backup_pending_v1')&&cloudSession)await window.cloudSaveAfterBatch();await cloudAutoCheck()},3000);setInterval(cloudAutoCheck,15*60*1000);
 })();
 </script>
+<script src="batch-editor.js" defer></script>
 </body></html>
