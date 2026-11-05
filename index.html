@@ -870,4 +870,73 @@ miniButtons();
 })();
 
 </script>
+<script>
+/* Migliorie additive 2026: soglie fidelity personalizzate, premi CONAD e arrotondamento a importo desiderato.
+   Mantiene tutte le funzionalità già presenti (anche backup cloud, admin, prodotti, casse). */
+(function(){
+'use strict';
+const $upgrade=id=>document.getElementById(id);
+const euroUpgrade=v=>'€ '+(Number(v)||0).toLocaleString('it-IT',{minimumFractionDigits:2,maximumFractionDigits:2});
+const valUpgrade=(v,d=0)=>{let n=Number(v);return Number.isFinite(n)&&n>=0?n:d};
+const safeUpgrade=v=>String(v??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+const st=document.createElement('style');st.textContent=`
+.fidelity-extra{padding:10px;border:1px solid #c9d7e7;border-radius:10px;background:#f2f7ff;margin:10px 0}
+.fidelity-extra label{display:block;font-size:12px;font-weight:700;margin:7px 0}
+.fidelity-extra input{display:block;width:100%;padding:8px;border:1px solid #bbcadb;border-radius:6px}
+.fidelity-extra button{font-size:12px;padding:7px 10px;min-height:30px}
+`;document.head.appendChild(st);
+function addGoalInput(kind){const isConad=kind==='conad';let container=isConad?null:$upgrade('modal');if(!container||container.querySelector('.fidelity-goal'))return;
+const html=`<div class="fidelity-extra fidelity-goal"><label>🎯 Totale desiderato (€) — es. 30,00<input id="goalPriceU" type="number" min="0" step="0.01" placeholder="30.00"></label><button class="btn" onclick="document.getElementById('t26price').value=Math.max(0,Math.round((Number(document.getElementById('goalPriceU').value)-calc().total)*100)/100).toFixed(2)">CALCOLA IMPORTO PER ARRIVARCI</button></div>`;
+container.insertAdjacentHTML('beforeend',html);
+}
+const previousTemp=window.openTempProduct2026;
+if(typeof previousTemp==='function')window.openTempProduct2026=function(){const r=previousTemp.apply(this,arguments);addGoalInput('unieuro');return r;};
+const previousEdit=window.editCard2026;
+if(typeof previousEdit==='function')window.editCard2026=function(i){const r=previousEdit(i),c=db.cards[i],m=$upgrade('modal');if(c&&m){m.insertAdjacentHTML('beforeend',`<div class="fidelity-extra"><h3>🎁 Bonus personalizzato per singolo acquisto</h3><p class="hint">Esempio: spesa di almeno 30 € → +50 punti extra. Le regole sono inventate per la simulazione.</p><label>Soglia spesa (€)<input id="bonusThresholdU" type="number" min="0" step="0.01" value="${valUpgrade(c.bonusThreshold,30)}"></label><label>Punti extra<input id="bonusPointsU" type="number" min="0" step="1" value="${valUpgrade(c.bonusPoints)}"></label><label><input id="bonusOnceU" type="checkbox" ${c.bonusOnce?'checked':''} style="display:inline;width:auto"> Solo una volta per cliente</label><label><input id="bonusUsedU" type="checkbox" ${c.bonusUsed?'checked':''} style="display:inline;width:auto"> Bonus già usato</label><button class="btn primary" onclick="saveCard2026(${i})">SALVA ANCHE BONUS</button></div>`)}return r;};
+const previousSave=window.saveCard2026;
+if(typeof previousSave==='function')window.saveCard2026=function(i){const c=db.cards[i],threshold=$upgrade('bonusThresholdU'),points=$upgrade('bonusPointsU'),once=$upgrade('bonusOnceU'),used=$upgrade('bonusUsedU');const extra=threshold&&points?{bonusThreshold:valUpgrade(threshold.value,30),bonusPoints:Math.floor(valUpgrade(points.value)),bonusOnce:once.checked,bonusUsed:used.checked}:null;const r=previousSave.apply(this,arguments);if(c&&extra){Object.assign(c,extra);save();renderAll()}return r;};
+function eligible(card,total){return !!card&&Number(card.bonusPoints)>0&&total>=Number(card.bonusThreshold??30)&&(!card.bonusOnce||!card.bonusUsed);}
+const previousTicket=window.ticketText;
+if(typeof previousTicket==='function')window.ticketText=function(t,method,paid,number){let c=db.cards.find(x=>x.code===getSlot().card),text=previousTicket.apply(this,arguments);if(eligible(c,t.total)){let note='\nPROMO FIDELITY (SOGLIA '+euroUpgrade(c.bonusThreshold??30)+'): +'+Math.floor(c.bonusPoints)+' PUNTI';text=text.replace('NON VALIDO AI FINI FISCALI',note+'\nNON VALIDO AI FINI FISCALI');if(!text.includes(note))text+=note;}return text;};
+const previousComplete=window.completeSale;
+if(typeof previousComplete==='function')window.completeSale=function(method,paid){let s=getSlot(),c=db.cards.find(x=>x.code===s.card),t=calc(),bonus=eligible(c,t.total)?Math.floor(Number(c.bonusPoints)):0;let oldReceipts=db.history.length;const r=previousComplete.apply(this,arguments);if(c&&bonus&&db.history.length>oldReceipts){c.points=Math.max(0,Math.floor(Number(c.points)||0)+bonus);if(c.bonusOnce)c.bonusUsed=true;(c.movements??=[]).unshift({date:new Date().toLocaleString('it-IT'),desc:'Bonus spesa '+euroUpgrade(t.total),points:bonus});c.movements=c.movements.slice(0,60);save();renderAll();}return r;};
+function enhanceConad(){
+const iframe=$upgrade('conadIframe'),doc=iframe?.contentDocument;if(!doc?.body)return;
+function conadPatch(){
+ const $=id=>document.getElementById(id),rnd=n=>Math.round((Number(n)+Number.EPSILON)*100)/100;
+ const enc=s=>String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+ const money=n=>'€ '+(Number(n)||0).toLocaleString('it-IT',{minimumFractionDigits:2,maximumFractionDigits:2});
+ const prizes=[
+  {name:'Buono spesa CONAD €6',points:600,kind:'Buono spesa'},
+  {name:'Gift card Decathlon €15',points:1500,kind:'Buono regalo'},
+  {name:'Gift card Zalando €20',points:2000,kind:'Buono regalo'},
+  {name:'Set piatti per la tavola',points:2500,kind:'Casa e cucina'},
+  {name:'Luci per bicicletta',points:1000,kind:'Sport'},
+  {name:'Compressore portatile',points:3500,kind:'Sport / accessori'}
+ ];
+ const css=document.createElement('style');css.textContent='.reward-card{background:#fff;border:1px solid #ddd;padding:9px;margin:7px 0;border-radius:8px;display:flex;align-items:center;justify-content:space-between;gap:8px}.reward-small{font-size:11px;color:#647688}.reward-inputs{background:#fff7fa;padding:10px;border-radius:9px;border:1px solid #f1c5cb;margin:10px 0}.reward-inputs input{width:100%}';document.head.appendChild(css);
+ const tray=[...document.querySelectorAll('div')].find(x=>x.style.position==='fixed'&&x.querySelector('button[onclick="cardsConad2026()"]'));
+ if(tray&&!tray.querySelector('.rewards2026')){let b=document.createElement('button');b.className='green rewards2026';b.textContent='🎁 PREMI miPREMIO';b.onclick=()=>window.conadPrizes2026();tray.appendChild(b)}
+ const oldTemp=window.tempConad2026;
+ if(typeof oldTemp==='function')window.tempConad2026=function(){let r=oldTemp.apply(this,arguments);$('modal')?.insertAdjacentHTML('beforeend','<div class="reward-inputs"><label>🎯 Totale desiderato (€)</label><input id="goalPriceC" type="number" min="0" step="0.01" placeholder="30.00"><button onclick="document.getElementById(\'c26price\').value=Math.max(0,Math.round((Number(document.getElementById(\'goalPriceC\').value)-totals().total)*100)/100).toFixed(2)">CALCOLA IMPORTO</button></div>');return r;};
+ const oldEdit=window.editC2026;
+ if(typeof oldEdit==='function')window.editC2026=function(i){let r=oldEdit(i),c=db.cards[i];if(c)$('modal')?.insertAdjacentHTML('beforeend',`<div class="reward-inputs"><h3>🎁 Bonus fidelity personalizzato</h3><small>Per esempio: +50 punti per una spesa da 30 €.</small><label>Importo minimo (€)<input id="bonusThresholdC" type="number" min="0" step="0.01" value="${Number(c.bonusThreshold??30)}"></label><label>Punti bonus<input id="bonusPointsC" type="number" min="0" step="1" value="${Number(c.bonusPoints||0)}"></label><label><input type="checkbox" id="bonusOnceC" style="width:auto" ${c.bonusOnce?'checked':''}> Solo una volta</label><label><input type="checkbox" id="bonusUsedC" style="width:auto" ${c.bonusUsed?'checked':''}> Bonus già utilizzato</label><button class="green" onclick="saveC2026(${i})">SALVA ANCHE BONUS</button></div>`);return r;};
+ const oldSave=window.saveC2026;
+ if(typeof oldSave==='function')window.saveC2026=function(i){let c=db.cards[i],q=$('bonusThresholdC'),p=$('bonusPointsC'),extra=q&&p?{bonusThreshold:Math.max(0,Number(q.value)||0),bonusPoints:Math.max(0,Math.floor(Number(p.value)||0)),bonusOnce:$('bonusOnceC').checked,bonusUsed:$('bonusUsedC').checked}:null;let r=oldSave.apply(this,arguments);if(c&&extra){Object.assign(c,extra);save();render()}return r;};
+ function getBonus(card,total){return card&&Number(card.bonusPoints)>0&&total>=Number(card.bonusThreshold??30)&&(!card.bonusOnce||!card.bonusUsed)?Math.floor(Number(card.bonusPoints)):0}
+ const oldTicket=window.makeTicket;
+ if(typeof oldTicket==='function')window.makeTicket=function(t){let c=getCard(),bonus=getBonus(c,t.total),txt=oldTicket.apply(this,arguments);if(bonus)txt=txt.replace('NON VALIDO AI FINI FISCALI','PROMO SPESA: +'+bonus+' PUNTI BONUS\nNON VALIDO AI FINI FISCALI');return txt;};
+ const oldComplete=window.complete;
+ if(typeof oldComplete==='function')window.complete=function(method,paid){let c=getCard(),t=totals(),bonus=getBonus(c,t.total),before=db.history.length;let result=oldComplete.apply(this,arguments);if(c&&bonus&&db.history.length>before){c.points=(Number(c.points)||0)+bonus;if(c.bonusOnce)c.bonusUsed=true;(c.movements??=[]).unshift({date:new Date().toLocaleString('it-IT'),desc:'Bonus soglia '+money(t.total),points:bonus});c.movements=c.movements.slice(0,60);save();render()}return result;};
+ window.conadPrizes2026=function(){
+  $('overlay').classList.add('show');$('modal').innerHTML=`<button class="close" onclick="closeModal()">✕ Chiudi</button><h2>🎁 Premi Carta Insieme · miPREMIO 2026</h2><p class="note">Esempi ispirati alle categorie e ai premi 2026. I punti indicati sono <b>valori dimostrativi</b> e possono variare per cooperativa; non generano premi reali.</p><a href="https://www.conad.it/carte-e-premi/mi-premio" target="_blank" rel="noopener noreferrer">Catalogo ufficiale CONAD 2026</a><p>Scegli tessera:</p><select id="prizeCardC">${db.cards.map(c=>`<option value="${enc(c.code)}">${enc(c.name)} — ${c.points||0} punti</option>`).join('')}</select>${prizes.map((x,i)=>`<div class="reward-card"><span><b>${enc(x.name)}</b><br><small class="reward-small">${enc(x.kind)} · ${x.points} punti demo</small></span><button onclick="redeemDemoPrizeC(${i})">RISCATTA</button></div>`).join('')}<p class="note">Nessuna attivazione o prenotazione ufficiale. Per premi e PIN reali rivolgersi al punto vendita.</p>`;
+ };
+ window.redeemDemoPrizeC=function(i){let p=prizes[i],code=$('prizeCardC')?.value,c=db.cards.find(x=>x.code===code);if(!p||!c)return notify('Seleziona prima una tessera');if(Number(c.points||0)<p.points)return notify('Punti insufficienti');if(!confirm('Scalare '+p.points+' punti dalla carta di '+c.name+' per '+p.name+'? Solo simulazione.'))return;c.points-=p.points;(c.movements??=[]).unshift({date:new Date().toLocaleString('it-IT'),desc:'Premio demo '+p.name,points:-p.points});(db.rewardRedemptions??=[]).unshift({date:new Date().toISOString(),cardCode:c.code,prizeName:p.name,points:p.points,code:'DEMO-'+Math.floor(Math.random()*1e9).toString().padStart(9,'0')});save();render();window.conadPrizes2026();notify('Premio simulato. -'+p.points+' punti. Nessun premio reale emesso')};
+}
+const s=doc.createElement('script');s.textContent='('+conadPatch.toString()+')()';doc.body.appendChild(s);
+}
+const oldInstall=window.installConadAddon;
+if(typeof oldInstall==='function')window.installConadAddon=function(){oldInstall.apply(this,arguments);try{enhanceConad()}catch(e){console.warn('Addon fidelity',e)}};
+})();
+</script>
 </body></html>
