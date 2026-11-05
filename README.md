@@ -65,3 +65,13 @@ Nella cassa **CONAD**, sopra il registratore, sono ora disponibili due pulsanti:
 - **PREMI FIDELITY** apre il catalogo premi già condiviso, selezionando automaticamente il negozio CONAD. Il riscatto scala i punti e registra lo storico.
 
 L'accumulo punti rimane **1 € di spesa = 1 punto**. I dati CONAD restano separati da quelli UNIEURO e sono inclusi nel sistema di backup cloud del simulatore.
+
+
+## Aggiornamento novembre 2026 — cassa, fidelity e scontrini
+
+- **CONAD e UNIEURO:** pulsante **AGGIUNGI PRODOTTO TEMPORANEO** per un prodotto valido solo nell'ordine corrente (nome, descrizione, prezzo, IVA).
+- **Gestione tessere:** possibilità di modificare punti, numero di acquisti e importo storico nelle tessere virtuali. Le vendite aggiornano i valori delle carte abbinate.
+- **Scontrini:** visualizzazione con loghi richiesti dall'utente; indicazione di simulazione alla fine, senza valore fiscale. I loghi esterni possono richiedere Internet.
+- **Carta Insieme:** informazioni e condizioni reali vanno verificate sul sito ufficiale Conad. Nel programma miPREMIO 2026 di alcune cooperative, 1 € di prodotti Conad e reparti aderenti = 1 punto, con condizioni e promozioni specifiche. [FAQ ufficiali](https://www.conad.it/servizio-clienti-e-faq/carte-conad) · [Regolamento 2026](https://www.conad.it/assets/common/volantini/ccn/vweb-l/web%20locandina%20A4%20-%20Nuovo%20regolamento%20punti%20-%202026.pdf).
+
+Progetto indipendente non affiliato ai negozi. Nessun POS, coupon o codice digitale effettua operazioni reali.
