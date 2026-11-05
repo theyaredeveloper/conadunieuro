@@ -45,7 +45,7 @@ Dalla schermata iniziale usa **🎁 PREMI FIDELITY**, oppure entra nel **PANNELL
 
 - Scegli CONAD o UNIEURO e seleziona una tessera già creata in quel negozio.
 - Catalogo dimostrativo di smartphone Apple iPhone e Samsung Galaxy, con prezzi di riferimento dei siti ufficiali italiani.
-- Soglia minima **1.200 punti**; per ciascun modello il costo in punti è `max(1200, ceil(prezzo_di_riferimento_euro * 1.2))`. La regola è esclusivamente della simulazione, non un'offerta dei marchi.
+- Accumulo fidelity invariato: **1 € di spesa = 1 punto** (impostazione predefinita). Per riscattare un premio il costo è `max(1200, ceil(prezzo_di_riferimento_euro * 50))`: smartphone da circa **40.000 a 75.000 punti**, così un saldo di 20.000 punti non basta per i telefoni più costosi. La regola è esclusivamente della simulazione, non un'offerta dei marchi.
 - Il riscatto richiede conferma, scala i punti dalla fidelity e registra lo storico nel backup di quel negozio.
 - Dopo il riscatto tenta immediatamente il backup cloud; se non sei autenticato resta in attesa e viene ritentato al login.
 
@@ -54,3 +54,5 @@ Fonti di riferimento: https://www.apple.com/it/shop/buy-iphone e https://www.sam
 ## Schermata iniziale
 
 **⚙ IMPOSTAZIONI SIMULATORE** è il comando principale, grande. **🔐 PANNELLO ADMIN** è più piccolo e riunisce backup cloud, prodotti in blocco, premi fidelity e impostazioni.
+
+**Correzione affidabilità:** il codice dei premi è integrato direttamente in `index.html`, senza dipendenze JavaScript esterne, e i pulsanti di selezione dei modelli funzionano correttamente.
