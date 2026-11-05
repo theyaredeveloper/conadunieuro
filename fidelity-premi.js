@@ -90,7 +90,7 @@ window.openAdminPanel=function(){
 window.openFidelityPrizes=function(){
  selectedStore=brand();selectedReward=PRIZES[0].id;selectedCard='';
  showModal('<div class="prize-modal"><h2>🎁 PREMI FIDELITY</h2><p class="hint">Premi dimostrativi per clienti fidelity. Prezzi di riferimento Apple/Samsung Italia; soglie simulate da <b>1.200 punti</b> in su, proporzionate al prezzo (1,2 punti per euro, minimo 1.200). Nessun prodotto fisico viene consegnato.</p><div class="prize-switch"><button id="prizeStoreConad" class="btn" onclick="switchFidelityStore(\'conad\')">🔴 CONAD</button><button id="prizeStoreUnieuro" class="btn" onclick="switchFidelityStore(\'unieuro\')">🔵 UNIEURO</button></div><div id="prizeContent"></div><p class="hint">Fonti prezzi: <a href="https://www.apple.com/it/shop/buy-iphone" target="_blank" rel="noopener noreferrer">Apple Italia</a> · <a href="https://www.samsung.com/it/smartphones/galaxy-s26/buy/" target="_blank" rel="noopener noreferrer">Samsung Italia</a>. I prezzi possono variare; i punti sono una regola della simulazione.</p></div>');
- switchFidelityStore(selectedStore);
+ window.switchFidelityStore(selectedStore);
 };
 window.switchFidelityStore=function(store){if(!['conad','unieuro'].includes(store))return;selectedStore=store;selectedCard='';$p('prizeStoreConad')?.classList.toggle('active',store==='conad');$p('prizeStoreUnieuro')?.classList.toggle('active',store==='unieuro');redraw()};
 window.chooseFidelityPrize=function(id){if(!PRIZES.some(p=>p.id===id))return;selectedReward=id;redraw()};
