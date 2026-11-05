@@ -38,3 +38,19 @@ L'app usa il progetto Supabase preconfigurato e mantiene le **ultime 7 copie** p
 **Sicurezza:** nessuna password privata o chiave `service_role` è inclusa nel repository. Nel frontend è presente soltanto la chiave Supabase pubblica. Non salvare password nel codice o nei commit.
 
 Il simulatore non è affiliato ai marchi citati; prezzi e pagamenti sono dimostrativi.
+
+## 🎁 Premi fidelity (CONAD e UNIEURO)
+
+Dalla schermata iniziale usa **🎁 PREMI FIDELITY**, oppure entra nel **PANNELLO ADMIN**. Nella cassa UNIEURO il collegamento è anche accanto alle tessere fidelity.
+
+- Scegli CONAD o UNIEURO e seleziona una tessera già creata in quel negozio.
+- Catalogo dimostrativo di smartphone Apple iPhone e Samsung Galaxy, con prezzi di riferimento dei siti ufficiali italiani.
+- Soglia minima **1.200 punti**; per ciascun modello il costo in punti è `max(1200, ceil(prezzo_di_riferimento_euro * 1.2))`. La regola è esclusivamente della simulazione, non un'offerta dei marchi.
+- Il riscatto richiede conferma, scala i punti dalla fidelity e registra lo storico nel backup di quel negozio.
+- Dopo il riscatto tenta immediatamente il backup cloud; se non sei autenticato resta in attesa e viene ritentato al login.
+
+Fonti di riferimento: https://www.apple.com/it/shop/buy-iphone e https://www.samsung.com/it/smartphones/galaxy-s26/buy/. I prezzi sono indicativi e possono cambiare. **Nessun premio reale viene distribuito.**
+
+## Schermata iniziale
+
+**⚙ IMPOSTAZIONI SIMULATORE** è il comando principale, grande. **🔐 PANNELLO ADMIN** è più piccolo e riunisce backup cloud, prodotti in blocco, premi fidelity e impostazioni.
